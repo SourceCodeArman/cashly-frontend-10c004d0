@@ -84,7 +84,7 @@ export const goalService = {
 
     // Update goal current_amount
     const goal = await this.getGoal(id);
-    const newAmount = parseFloat((goal?.current_amount || 0).toString()) + parseFloat(contributionData.amount.toString());
+    const newAmount = parseFloat(goal.current_amount.toString()) + parseFloat(contributionData.amount.toString());
     
     const { data, error } = await supabase
       .from('goals')
