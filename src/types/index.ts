@@ -186,6 +186,7 @@ export interface CreateSubscriptionRequest {
   plan: string;
   billing_cycle: string;
   trial_enabled?: boolean;
+  price_id?: string;
 }
 
 // Notification types

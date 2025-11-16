@@ -135,27 +135,26 @@ export default function Transactions() {
           <div className="space-y-3">
             {filteredTransactions?.map((transaction) => (
               <div
-                key={transaction.id}
+                key={transaction.transaction_id}
                 className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-secondary/50 transition-colors"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium">{transaction.name}</p>
+                    <p className="font-medium">{transaction.merchant_name || transaction.description}</p>
                     {transaction.pending && <Badge variant="secondary">Pending</Badge>}
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                     <span>{formatDate(transaction.date)}</span>
-                    {transaction.category && (
-                      <span className="text-primary">{transaction.category}</span>
+                    {transaction.category?.name && (
+                      <span className="text-primary">{transaction.category.name}</span>
                     )}
-                    {transaction.merchant_name && <span>{transaction.merchant_name}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Select
-                    value={transaction.category || ''}
+                    value={transaction.category_id || ''}
                     onValueChange={(value) =>
-                      categorizeMutation.mutate({ id: transaction.id, categoryId: value })
+                      categorizeMutation.mutate({ id: transaction.transaction_id, categoryId: value })
                     }
                   >
                     <SelectTrigger className="w-32">
@@ -163,7 +162,7 @@ export default function Transactions() {
                     </SelectTrigger>
                     <SelectContent>
                       {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
+                        <SelectItem key={cat.category_id} value={cat.category_id}>
                           {cat.name}
                         </SelectItem>
                       ))}

@@ -67,7 +67,7 @@ export default function Subscription() {
           <CardContent className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Plan:</span>
-              <Badge>{currentSubscription.tier}</Badge>
+              <Badge>{currentSubscription.plan}</Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status:</span>
@@ -116,9 +116,9 @@ export default function Subscription() {
                 className={`w-full ${index === 1 ? 'bg-gradient-primary' : ''}`}
                 variant={index === 1 ? 'default' : 'outline'}
                 onClick={() => handleSubscribe(tier.price_id)}
-                disabled={currentSubscription?.tier === tier.name}
+                disabled={currentSubscription?.plan === tier.name}
               >
-                {currentSubscription?.tier === tier.name ? 'Current Plan' : 'Subscribe'}
+                {currentSubscription?.plan === tier.name ? 'Current Plan' : 'Subscribe'}
               </Button>
             </CardContent>
           </Card>
