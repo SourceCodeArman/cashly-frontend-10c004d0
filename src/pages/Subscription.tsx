@@ -7,8 +7,12 @@ import { Check, CreditCard } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { loadStripe } from '@stripe/stripe-js';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Subscription() {
+  const { user } = useAuthStore();
+  const currentTier = user?.subscription_tier || 'free';
+
   const { data: config } = useQuery({
     queryKey: ['subscription-config'],
     queryFn: subscriptionService.getConfig,
@@ -20,6 +24,20 @@ export default function Subscription() {
   });
 
   const currentSubscription = subscriptions?.[0];
+
+  const getButtonText = (tierId: string) => {
+    if (currentTier === tierId) {
+      return 'Current Plan';
+    }
+    if (tierId === 'free') {
+      return 'Downgrade to Free';
+    }
+    return `Upgrade to ${tierId === 'pro' ? 'Pro' : 'Premium'}`;
+  };
+
+  const isButtonDisabled = (tierId: string) => {
+    return currentTier === tierId;
+  };
 
   const handleSubscribe = async (priceId: string) => {
     try {
@@ -116,9 +134,9 @@ export default function Subscription() {
                 className={`w-full ${index === 1 ? 'bg-gradient-primary' : ''}`}
                 variant={index === 1 ? 'default' : 'outline'}
                 onClick={() => handleSubscribe(tier.price_id)}
-                disabled={currentSubscription?.plan === tier.name}
+                disabled={isButtonDisabled(tier.id)}
               >
-                {currentSubscription?.plan === tier.name ? 'Current Plan' : 'Subscribe'}
+                {getButtonText(tier.id)}
               </Button>
             </CardContent>
           </Card>
