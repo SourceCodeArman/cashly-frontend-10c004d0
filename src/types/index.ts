@@ -182,10 +182,7 @@ export interface Subscription {
 }
 
 export interface CreateSubscriptionRequest {
-  payment_method_id: string;
-  plan: string;
-  billing_cycle: string;
-  trial_enabled?: boolean;
+  price_id: string;
 }
 
 // Notification types

@@ -48,7 +48,7 @@ export default function Transactions() {
   });
 
   const filteredTransactions = transactionsData?.results.filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase())
+    (t.merchant_name || t.description || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -68,7 +68,7 @@ export default function Transactions() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-destructive">
-                {formatCurrency(stats.total_spending)}
+                {formatCurrency(stats.expense_total)}
               </p>
             </CardContent>
           </Card>
@@ -80,7 +80,7 @@ export default function Transactions() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-success">
-                {formatCurrency(stats.total_income)}
+                {formatCurrency(stats.income_total)}
               </p>
             </CardContent>
           </Card>
@@ -91,7 +91,7 @@ export default function Transactions() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-primary">{stats.transactions_count}</p>
+              <p className="text-2xl font-bold text-primary">{stats.total_count}</p>
             </CardContent>
           </Card>
         </div>
@@ -119,14 +119,14 @@ export default function Transactions() {
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories?.map((cat) => (
+                      <SelectItem key={cat.category_id} value={cat.category_id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
               </Select>
             </div>
           </div>
@@ -135,27 +135,26 @@ export default function Transactions() {
           <div className="space-y-3">
             {filteredTransactions?.map((transaction) => (
               <div
-                key={transaction.id}
+                key={transaction.transaction_id}
                 className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-secondary/50 transition-colors"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium">{transaction.name}</p>
+                    <p className="font-medium">{transaction.merchant_name || transaction.description || 'Transaction'}</p>
                     {transaction.pending && <Badge variant="secondary">Pending</Badge>}
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                     <span>{formatDate(transaction.date)}</span>
                     {transaction.category && (
-                      <span className="text-primary">{transaction.category}</span>
+                      <span className="text-primary">{transaction.category.name}</span>
                     )}
-                    {transaction.merchant_name && <span>{transaction.merchant_name}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Select
-                    value={transaction.category || ''}
+                    value={transaction.category_id || ''}
                     onValueChange={(value) =>
-                      categorizeMutation.mutate({ id: transaction.id, categoryId: value })
+                      categorizeMutation.mutate({ id: transaction.transaction_id, categoryId: value })
                     }
                   >
                     <SelectTrigger className="w-32">
@@ -163,7 +162,7 @@ export default function Transactions() {
                     </SelectTrigger>
                     <SelectContent>
                       {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
+                        <SelectItem key={cat.category_id} value={cat.category_id}>
                           {cat.name}
                         </SelectItem>
                       ))}
