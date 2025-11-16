@@ -4,27 +4,27 @@ import { Account, LinkTokenResponse, PlaidConnectRequest } from '@/types';
 export const accountService = {
   createLinkToken: async (): Promise<LinkTokenResponse> => {
     const response = await axiosInstance.post('/accounts/create-link-token');
-    return response.data;
+    return response.data.data;
   },
 
   connectAccount: async (data: PlaidConnectRequest): Promise<Account[]> => {
     const response = await axiosInstance.post('/accounts/connect', data);
-    return response.data;
+    return response.data.data.accounts;
   },
 
   getAccounts: async (): Promise<Account[]> => {
     const response = await axiosInstance.get('/accounts/');
-    return response.data;
+    return response.data.data;
   },
 
   getAccount: async (id: string): Promise<Account> => {
-    const response = await axiosInstance.get(`/accounts/${id}`);
-    return response.data;
+    const response = await axiosInstance.get(`/accounts/${id}/`);
+    return response.data.data;
   },
 
   updateAccount: async (id: string, data: Partial<Account>): Promise<Account> => {
-    const response = await axiosInstance.patch(`/accounts/${id}`, data);
-    return response.data;
+    const response = await axiosInstance.patch(`/accounts/${id}/`, data);
+    return response.data.data;
   },
 
   syncAccount: async (id: string): Promise<void> => {

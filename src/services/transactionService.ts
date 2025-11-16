@@ -11,19 +11,19 @@ export const transactionService = {
     account?: string;
   }): Promise<{ results: Transaction[]; count: number; next: string | null; previous: string | null }> => {
     const response = await axiosInstance.get('/transactions/transactions/', { params });
-    return response.data;
+    return response.data.data || response.data;
   },
 
   getTransaction: async (id: string): Promise<Transaction> => {
-    const response = await axiosInstance.get(`/transactions/transactions/${id}`);
-    return response.data;
+    const response = await axiosInstance.get(`/transactions/transactions/${id}/`);
+    return response.data.data;
   },
 
   categorizeTransaction: async (id: string, categoryId: string): Promise<Transaction> => {
     const response = await axiosInstance.post(`/transactions/transactions/${id}/categorize`, {
-      category: categoryId,
+      category_id: categoryId,
     });
-    return response.data;
+    return response.data.data;
   },
 
   getStats: async (params?: {
@@ -31,6 +31,6 @@ export const transactionService = {
     end_date?: string;
   }): Promise<TransactionStats> => {
     const response = await axiosInstance.get('/transactions/transactions/stats', { params });
-    return response.data;
+    return response.data.data;
   },
 };
