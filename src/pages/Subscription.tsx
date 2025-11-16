@@ -28,7 +28,12 @@ export default function Subscription() {
         return;
       }
 
-      const response = await subscriptionService.createSubscription({ price_id: priceId });
+      const response = await subscriptionService.createSubscription({ 
+        price_id: priceId,
+        payment_method_id: '',
+        plan: 'pro',
+        billing_cycle: 'monthly'
+      });
       
       const stripe = await loadStripe(config.publishable_key);
       if (!stripe) {
