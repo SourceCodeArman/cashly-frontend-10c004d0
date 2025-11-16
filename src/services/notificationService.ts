@@ -4,29 +4,29 @@ import { Notification, UnreadCountResponse } from '@/types';
 export const notificationService = {
   getNotifications: async (): Promise<Notification[]> => {
     const response = await axiosInstance.get('/notifications/');
-    return response.data;
+    return response.data.data.results || response.data.data;
   },
 
   getUnreadCount: async (): Promise<UnreadCountResponse> => {
     const response = await axiosInstance.get('/notifications/unread_count/');
-    return response.data;
+    return response.data.data;
   },
 
   getNotification: async (id: string): Promise<Notification> => {
-    const response = await axiosInstance.get(`/notifications/${id}`);
-    return response.data;
+    const response = await axiosInstance.get(`/notifications/${id}/`);
+    return response.data.data;
   },
 
   markAsRead: async (id: string): Promise<Notification> => {
-    const response = await axiosInstance.patch(`/notifications/${id}/mark_read`);
-    return response.data;
+    const response = await axiosInstance.patch(`/notifications/${id}/mark_read/`);
+    return response.data.data;
   },
 
   markAllAsRead: async (): Promise<void> => {
-    await axiosInstance.post('/notifications/mark_all_read');
+    await axiosInstance.post('/notifications/mark_all_read/');
   },
 
   deleteNotification: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/notifications/${id}`);
+    await axiosInstance.delete(`/notifications/${id}/`);
   },
 };

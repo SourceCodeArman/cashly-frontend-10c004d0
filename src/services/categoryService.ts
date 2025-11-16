@@ -4,7 +4,7 @@ import { Category } from '@/types';
 export const categoryService = {
   getCategories: async (): Promise<Category[]> => {
     const response = await axiosInstance.get('/transactions/categories/');
-    return response.data;
+    return response.data.data;
   },
 
   createCategory: async (data: {
@@ -13,6 +13,6 @@ export const categoryService = {
     icon?: string;
   }): Promise<Category> => {
     const response = await axiosInstance.post('/transactions/categories/', data);
-    return response.data;
+    return response.data.data;
   },
 };
