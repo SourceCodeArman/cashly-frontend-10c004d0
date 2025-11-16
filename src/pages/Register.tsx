@@ -23,14 +23,12 @@ export default function Register() {
   const registerMutation = useMutation({
     mutationFn: authService.register,
     onSuccess: (data) => {
-      localStorage.setItem('access_token', data.tokens.access);
-      localStorage.setItem('refresh_token', data.tokens.refresh);
       setUser(data.user);
       toast.success('Account created successfully!');
       navigate('/dashboard');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Registration failed. Please try again.');
+      toast.error(error.message || 'Registration failed. Please try again.');
     },
   });
 

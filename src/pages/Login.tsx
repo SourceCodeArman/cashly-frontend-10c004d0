@@ -19,14 +19,12 @@ export default function Login() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      localStorage.setItem('access_token', data.tokens.access);
-      localStorage.setItem('refresh_token', data.tokens.refresh);
       setUser(data.user);
       toast.success('Welcome back!');
       navigate('/dashboard');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Login failed. Please check your credentials.');
+      toast.error(error.message || 'Login failed. Please check your credentials.');
     },
   });
 

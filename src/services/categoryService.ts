@@ -1,18 +1,37 @@
-import { axiosInstance } from '@/lib/axios';
+import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/types';
 
 export const categoryService = {
   getCategories: async (): Promise<Category[]> => {
-    const response = await axiosInstance.get('/transactions/categories/');
-    return response.data.data;
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
   },
 
-  createCategory: async (data: {
+  createCategory: async (categoryData: {
     name: string;
     color: string;
     icon?: string;
   }): Promise<Category> => {
-    const response = await axiosInstance.post('/transactions/categories/', data);
-    return response.data.data;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([{ 
+        ...categoryData, 
+        user_id: user.id, 
+        type: 'expense',
+        is_system_category: false 
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 };
