@@ -46,6 +46,18 @@ export const useAuthStore = create<AuthState>((set) => ({
             isAuthenticated: true,
             isLoading: false,
           });
+        } else {
+          // Fallback when profile row doesn't exist yet
+          set({
+            user: {
+              id: session.user.id,
+              email: session.user.email!,
+              subscription_tier: 'free',
+              subscription_status: 'active',
+            },
+            isAuthenticated: true,
+            isLoading: false,
+          });
         }
       } else {
         set({ user: null, isAuthenticated: false, isLoading: false });
@@ -81,6 +93,17 @@ supabase.auth.onAuthStateChange(async (event, session) => {
           last_name: profile.last_name,
           subscription_tier: profile.subscription_tier,
           subscription_status: profile.subscription_status,
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } else {
+      useAuthStore.setState({
+        user: {
+          id: session.user.id,
+          email: session.user.email!,
+          subscription_tier: 'free',
+          subscription_status: 'active',
         },
         isAuthenticated: true,
         isLoading: false,
