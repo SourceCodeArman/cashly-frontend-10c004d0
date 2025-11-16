@@ -22,7 +22,7 @@ import {
 export default function Subscription() {
   const { user, refreshUser } = useAuthStore();
   const queryClient = useQueryClient();
-  const currentTier = user?.subscription_tier || 'free';
+  const currentTierUser = user?.subscription_tier || 'free';
   const [prorateDialog, setProrateDialog] = useState<{
     isOpen: boolean;
     tierName: string;
@@ -51,6 +51,8 @@ export default function Subscription() {
     queryKey: ['subscription-status'],
     queryFn: subscriptionService.checkSubscription,
   });
+
+  const currentTier = (subscriptionStatus?.tier as 'free' | 'pro' | 'premium' | undefined) || currentTierUser;
 
   // Check subscription status on mount and periodically
   useEffect(() => {

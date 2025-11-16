@@ -19,7 +19,8 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
   );
 
   try {
@@ -48,14 +49,14 @@ serve(async (req) => {
     if (customers.data.length === 0) {
       logStep("No customer found, user is on free plan");
       
-      // Update user profile to free tier
-      await supabaseClient
+      const { error: profileFreeErr } = await supabaseClient
         .from('profiles')
         .update({ 
           subscription_tier: 'free',
           subscription_status: 'active'
         })
         .eq('user_id', user.id);
+      if (profileFreeErr) logStep("Failed to update profile to free", { error: profileFreeErr.message });
         
       return new Response(JSON.stringify({ 
         subscribed: false, 
@@ -92,15 +93,21 @@ serve(async (req) => {
         periodEndType: typeof subscription.current_period_end 
       });
       
-      // Safely convert timestamp to ISO string
+      // Safely convert timestamp to ISO string with fallback retrieval
       try {
-        if (subscription.current_period_end && typeof subscription.current_period_end === 'number') {
-          const timestamp = subscription.current_period_end * 1000;
-          logStep("Converting timestamp", { timestamp, original: subscription.current_period_end });
-          subscriptionEnd = new Date(timestamp).toISOString();
+        const toIso = (ts: number) => new Date(ts * 1000).toISOString();
+        if (typeof subscription.current_period_end === 'number') {
+          subscriptionEnd = toIso(subscription.current_period_end);
           logStep("Converted date", { subscriptionEnd });
         } else {
-          logStep("Invalid period end format", { periodEnd: subscription.current_period_end });
+          logStep("Period end missing on list response, retrieving subscription");
+          const fullSub = await stripe.subscriptions.retrieve(subscription.id);
+          if (typeof fullSub.current_period_end === 'number') {
+            subscriptionEnd = toIso(fullSub.current_period_end);
+            logStep("Converted date (retrieved)", { subscriptionEnd });
+          } else {
+            logStep("Invalid period end format after retrieval", { periodEnd: fullSub.current_period_end });
+          }
         }
       } catch (dateError) {
         logStep("Date conversion error", { 
@@ -128,15 +135,15 @@ serve(async (req) => {
         logStep("No product ID found in subscription");
       }
       
-      // Update user profile with subscription info
-      await supabaseClient
+      const { error: profileUpdateErr } = await supabaseClient
         .from('profiles')
         .update({ 
           subscription_tier: tier,
           subscription_status: 'active'
         })
         .eq('user_id', user.id);
-        
+      if (profileUpdateErr) logStep("Failed to update user profile", { error: profileUpdateErr.message });
+      
       logStep("Updated user profile", { tier });
 
       // Save/update subscription in database
@@ -160,29 +167,37 @@ serve(async (req) => {
 
       if (existingSubscription) {
         // Update existing
-        await supabaseClient
+        const { error: subUpdateErr } = await supabaseClient
           .from('subscriptions')
           .update(subData)
           .eq('subscription_id', existingSubscription.subscription_id);
-        logStep("Updated existing subscription in database");
+        if (subUpdateErr) {
+          logStep("Failed to update existing subscription", { error: subUpdateErr.message });
+        } else {
+          logStep("Updated existing subscription in database");
+        }
       } else {
         // Insert new
-        await supabaseClient
+        const { error: subInsertErr } = await supabaseClient
           .from('subscriptions')
           .insert(subData);
-        logStep("Inserted new subscription in database");
+        if (subInsertErr) {
+          logStep("Failed to insert subscription", { error: subInsertErr.message });
+        } else {
+          logStep("Inserted new subscription in database");
+        }
       }
     } else {
       logStep("No active subscription found");
       
-      // Update user profile to free tier
-      await supabaseClient
+      const { error: profileNoActiveErr } = await supabaseClient
         .from('profiles')
         .update({ 
           subscription_tier: 'free',
           subscription_status: 'active'
         })
         .eq('user_id', user.id);
+      if (profileNoActiveErr) logStep("Failed to set profile to free (no active sub)", { error: profileNoActiveErr.message });
     }
 
     return new Response(JSON.stringify({
