@@ -131,4 +131,18 @@ export const subscriptionService = {
     if (error) throw error;
     return data;
   },
+
+  updateSubscriptionPlan: async (priceId: string): Promise<{
+    success: boolean;
+    subscriptionId: string;
+    proratedAmount: number;
+    nextBillingDate: string;
+  }> => {
+    const { data, error } = await supabase.functions.invoke('update-subscription', {
+      body: { priceId },
+    });
+
+    if (error) throw error;
+    return data;
+  },
 };

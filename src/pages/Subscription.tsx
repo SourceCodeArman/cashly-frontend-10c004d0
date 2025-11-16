@@ -3,16 +3,39 @@ import { subscriptionService } from '@/services/subscriptionService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, CreditCard, RefreshCw, Settings, Calendar } from 'lucide-react';
+import { Check, CreditCard, RefreshCw, Settings, Calendar, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Subscription() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const currentTier = user?.subscription_tier || 'free';
+  const [prorateDialog, setProrateDialog] = useState<{
+    isOpen: boolean;
+    tierName: string;
+    priceId: string;
+    newPrice: number;
+    isUpgrade: boolean;
+  }>({
+    isOpen: false,
+    tierName: '',
+    priceId: '',
+    newPrice: 0,
+    isUpgrade: false,
+  });
 
   const { data: config } = useQuery({
     queryKey: ['subscription-config'],
@@ -67,6 +90,26 @@ export default function Subscription() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (priceId: string) => {
+      const result = await subscriptionService.updateSubscriptionPlan(priceId);
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data.proratedAmount > 0 
+          ? `Subscription updated! You'll be charged ${formatCurrency(data.proratedAmount)} today.`
+          : `Subscription updated! Your new rate starts on ${new Date(data.nextBillingDate).toLocaleDateString()}.`
+      );
+      refetchStatus();
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      setProrateDialog({ ...prorateDialog, isOpen: false });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update subscription');
+    },
+  });
+
   const getButtonText = (tierId: string) => {
     if (currentTier === tierId) {
       return 'Current Plan';
@@ -74,20 +117,55 @@ export default function Subscription() {
     if (tierId === 'free') {
       return 'Downgrade to Free';
     }
-    return `Upgrade to ${tierId === 'pro' ? 'Pro' : 'Premium'}`;
+    
+    const tierPrices = { free: 0, pro: 9.99, premium: 19.99 };
+    const currentPrice = tierPrices[currentTier as keyof typeof tierPrices] || 0;
+    const newPrice = tierPrices[tierId as keyof typeof tierPrices] || 0;
+    
+    if (newPrice > currentPrice) {
+      return `Upgrade to ${tierId === 'pro' ? 'Pro' : 'Premium'}`;
+    } else {
+      return `Switch to ${tierId === 'pro' ? 'Pro' : 'Premium'}`;
+    }
   };
 
   const isButtonDisabled = (tierId: string) => {
     return currentTier === tierId;
   };
 
-  const handleSubscribe = async (tierId: string, priceId: string) => {
-    if (tierId === 'free') {
-      // Open customer portal for downgrades
-      portalMutation.mutate();
-    } else {
+  const handleSubscribe = async (tierId: string, priceId: string, tierName: string, price: number) => {
+    // If user has no subscription or is on free tier, use checkout
+    if (currentTier === 'free' || !subscriptionStatus?.subscribed) {
+      if (tierId === 'free') {
+        toast.info('You are already on the free plan');
+        return;
+      }
       checkoutMutation.mutate(priceId);
+      return;
     }
+
+    // If downgrading to free, use customer portal
+    if (tierId === 'free') {
+      portalMutation.mutate();
+      return;
+    }
+
+    // For upgrades/downgrades between paid plans, show proration dialog
+    const tierPrices = { free: 0, pro: 9.99, premium: 19.99 };
+    const currentPrice = tierPrices[currentTier as keyof typeof tierPrices] || 0;
+    const isUpgrade = price > currentPrice;
+
+    setProrateDialog({
+      isOpen: true,
+      tierName,
+      priceId,
+      newPrice: price,
+      isUpgrade,
+    });
+  };
+
+  const confirmPlanChange = () => {
+    updateMutation.mutate(prorateDialog.priceId);
   };
 
   return (
@@ -267,15 +345,69 @@ export default function Subscription() {
               <Button
                 className={`w-full ${index === 1 ? 'bg-gradient-primary' : ''}`}
                 variant={index === 1 ? 'default' : 'outline'}
-                onClick={() => handleSubscribe(tier.id, tier.price_id)}
-                disabled={isButtonDisabled(tier.id) || checkoutMutation.isPending || portalMutation.isPending}
+                onClick={() => handleSubscribe(tier.id, tier.price_id, tier.name, tier.price)}
+                disabled={isButtonDisabled(tier.id) || checkoutMutation.isPending || portalMutation.isPending || updateMutation.isPending}
               >
-                {checkoutMutation.isPending || portalMutation.isPending ? 'Loading...' : getButtonText(tier.id)}
+                {(checkoutMutation.isPending || portalMutation.isPending || updateMutation.isPending) ? 'Loading...' : getButtonText(tier.id)}
               </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Proration Confirmation Dialog */}
+      <AlertDialog open={prorateDialog.isOpen} onOpenChange={(open) => setProrateDialog({ ...prorateDialog, isOpen: open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {prorateDialog.isUpgrade ? (
+                <ArrowUpCircle className="h-5 w-5 text-success" />
+              ) : (
+                <ArrowDownCircle className="h-5 w-5 text-primary" />
+              )}
+              Confirm Plan Change
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-4">
+              <p>
+                You're about to {prorateDialog.isUpgrade ? 'upgrade' : 'switch'} to the <strong>{prorateDialog.tierName}</strong> plan 
+                ({formatCurrency(prorateDialog.newPrice)}/month).
+              </p>
+              
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <h4 className="font-medium text-sm text-foreground">What happens next:</h4>
+                <ul className="text-sm space-y-1.5 text-muted-foreground">
+                  {prorateDialog.isUpgrade ? (
+                    <>
+                      <li>• Your plan will be upgraded immediately</li>
+                      <li>• You'll be charged a prorated amount for the remainder of your billing period</li>
+                      <li>• Starting next billing cycle, you'll pay {formatCurrency(prorateDialog.newPrice)}/month</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• Your plan will be changed immediately</li>
+                      <li>• You may receive a credit for the unused portion of your current plan</li>
+                      <li>• Starting next billing cycle, you'll pay {formatCurrency(prorateDialog.newPrice)}/month</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Stripe will automatically calculate the prorated amount based on the remaining days in your billing period.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmPlanChange}
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? 'Processing...' : 'Confirm Change'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
