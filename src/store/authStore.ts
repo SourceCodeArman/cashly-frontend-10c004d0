@@ -9,6 +9,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   initAuth: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -66,6 +67,37 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: null, isAuthenticated: false });
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  refreshUser: async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (profile) {
+          set({
+            user: {
+              id: session.user.id,
+              email: session.user.email!,
+              username: profile.username,
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              subscription_tier: profile.subscription_tier,
+              subscription_status: profile.subscription_status,
+            },
+            isAuthenticated: true,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('User refresh error:', error);
     }
   },
 

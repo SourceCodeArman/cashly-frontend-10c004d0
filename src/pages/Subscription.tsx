@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function Subscription() {
-  const { user } = useAuthStore();
+  const { user, refreshUser } = useAuthStore();
   const queryClient = useQueryClient();
   const currentTier = user?.subscription_tier || 'free';
   const [prorateDialog, setProrateDialog] = useState<{
@@ -60,6 +60,18 @@ export default function Subscription() {
     }, 60000); // Check every minute
     return () => clearInterval(interval);
   }, [refetchStatus]);
+
+  // Refresh user when returning from Stripe checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      // Wait a bit for Stripe webhook to process
+      setTimeout(() => {
+        refetchStatus();
+        refreshUser();
+      }, 2000);
+    }
+  }, [refetchStatus, refreshUser]);
 
   const currentSubscription = subscriptions?.[0];
 
@@ -102,6 +114,7 @@ export default function Subscription() {
           : `Subscription updated! Your new rate starts on ${new Date(data.nextBillingDate).toLocaleDateString()}.`
       );
       refetchStatus();
+      refreshUser();
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
       setProrateDialog({ ...prorateDialog, isOpen: false });
     },

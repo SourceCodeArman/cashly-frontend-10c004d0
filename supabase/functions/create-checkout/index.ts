@@ -48,12 +48,27 @@ serve(async (req) => {
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     logStep("Stripe initialized");
 
-    // Check if customer exists
+    // Check if customer exists and has active subscriptions
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
+    
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
       logStep("Found existing customer", { customerId });
+      
+      // Check for active subscriptions
+      const activeSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "active",
+        limit: 1,
+      });
+      
+      if (activeSubscriptions.data.length > 0) {
+        logStep("User already has active subscription", { 
+          subscriptionId: activeSubscriptions.data[0].id 
+        });
+        throw new Error("You already have an active subscription. Please use the upgrade/downgrade flow or cancel your current subscription first.");
+      }
     } else {
       logStep("No existing customer found");
     }
@@ -72,6 +87,9 @@ serve(async (req) => {
       mode: "subscription",
       success_url: `${origin}/subscription?success=true`,
       cancel_url: `${origin}/subscription?canceled=true`,
+      metadata: {
+        user_id: user.id,
+      },
     });
     logStep("Checkout session created", { sessionId: session.id });
 
