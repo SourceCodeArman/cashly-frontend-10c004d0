@@ -130,7 +130,7 @@ const Landing = () => {
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-20">
-        <Card className="max-w-4xl mx-auto p-8 md:p-12 bg-gradient-primary text-primary-foreground">
+        <Card className="max-w-6xl mx-auto p-8 md:p-12 bg-gradient-primary text-primary-foreground">
           <div className="text-center space-y-6">
             <h2 className="text-3xl md:text-4xl font-bold">
               Ready to Transform Your Finances?
