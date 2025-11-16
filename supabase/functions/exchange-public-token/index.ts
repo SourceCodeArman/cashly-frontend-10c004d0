@@ -190,12 +190,13 @@ serve(async (req) => {
         }
 
         // Prepare transactions for insertion
-        // Note: In Plaid, positive amounts = expenses (money out), negative = income (money in)
+        // Note: Plaid sends positive amounts for expenses, negative for income
+        // We invert the sign: negative = expense (red), positive = income (green) in our UI
         const transactionsToInsert = txData.transactions.map((tx: any) => ({
           user_id: user.id,
           account_id: accountIdMap.get(tx.account_id),
           plaid_transaction_id: tx.transaction_id,
-          amount: tx.amount, // Keep original sign: positive for expenses, negative for income
+          amount: -tx.amount, // Invert sign: Plaid positive (expense) becomes negative
           date: tx.date,
           description: tx.name,
           merchant_name: tx.merchant_name || tx.name,
