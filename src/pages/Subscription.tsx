@@ -84,7 +84,7 @@ export default function Subscription() {
       )}
 
       <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
-        {config?.tiers.map((tier, index) => (
+        {(config?.tiers ?? []).map((tier, index) => (
           <Card
             key={tier.id}
             className={`border-border shadow-soft hover:shadow-md transition-all ${
