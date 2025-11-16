@@ -11,6 +11,7 @@ import { ProtectedLayout } from "@/layouts/ProtectedLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
 
 // Pages
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -39,6 +40,9 @@ const AppContent = () => {
 
   return (
     <Routes>
+      {/* Landing Page */}
+      <Route path="/" element={<Landing />} />
+
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
@@ -56,9 +60,6 @@ const AppContent = () => {
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
-
-      {/* Redirect root to dashboard */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />
