@@ -1,0 +1,168 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[EXCHANGE-TOKEN] ${step}${detailsStr}`);
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
+  );
+
+  try {
+    logStep("Function started");
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No authorization header provided");
+    
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    const user = userData.user;
+    if (!user?.id) throw new Error("User not authenticated");
+    logStep("User authenticated", { userId: user.id });
+
+    const { publicToken } = await req.json();
+    if (!publicToken) throw new Error("Public token is required");
+
+    const plaidClientId = Deno.env.get("PLAID_CLIENT_ID");
+    const plaidSecret = Deno.env.get("PLAID_SECRET");
+    if (!plaidClientId || !plaidSecret) {
+      throw new Error("Plaid credentials not configured");
+    }
+
+    const plaidEnv = Deno.env.get("PLAID_ENV") || "sandbox";
+    const plaidUrl = plaidEnv === "production" 
+      ? "https://production.plaid.com" 
+      : `https://${plaidEnv}.plaid.com`;
+
+    logStep("Exchanging public token");
+
+    // Exchange public token for access token
+    const exchangeResponse = await fetch(`${plaidUrl}/item/public_token/exchange`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: plaidClientId,
+        secret: plaidSecret,
+        public_token: publicToken,
+      }),
+    });
+
+    const exchangeData = await exchangeResponse.json();
+    if (!exchangeResponse.ok) {
+      logStep("Token exchange error", { error: exchangeData });
+      throw new Error(exchangeData.error_message || "Failed to exchange token");
+    }
+
+    const { access_token, item_id } = exchangeData;
+    logStep("Token exchanged successfully", { item_id });
+
+    // Get accounts
+    const accountsResponse = await fetch(`${plaidUrl}/accounts/get`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: plaidClientId,
+        secret: plaidSecret,
+        access_token: access_token,
+      }),
+    });
+
+    const accountsData = await accountsResponse.json();
+    if (!accountsResponse.ok) {
+      logStep("Accounts fetch error", { error: accountsData });
+      throw new Error(accountsData.error_message || "Failed to fetch accounts");
+    }
+
+    logStep("Fetched accounts", { count: accountsData.accounts.length });
+
+    // Get institution info
+    const institution = accountsData.item.institution_id;
+    let institutionName = "Unknown Institution";
+    
+    try {
+      const instResponse = await fetch(`${plaidUrl}/institutions/get_by_id`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: plaidClientId,
+          secret: plaidSecret,
+          institution_id: institution,
+          country_codes: ["US"],
+        }),
+      });
+      const instData = await instResponse.json();
+      if (instResponse.ok) {
+        institutionName = instData.institution.name;
+      }
+    } catch (error) {
+      logStep("Failed to fetch institution name", { error });
+    }
+
+    // Store accounts in database
+    const accountsToInsert = accountsData.accounts.map((acc: any) => ({
+      user_id: user.id,
+      plaid_account_id: acc.account_id,
+      plaid_item_id: item_id,
+      plaid_access_token: access_token,
+      institution_name: institutionName,
+      institution_id: institution,
+      account_type: mapPlaidAccountType(acc.type),
+      balance: acc.balances.current || 0,
+      account_number_masked: acc.mask || null,
+      custom_name: acc.name,
+      currency: acc.balances.iso_currency_code || "USD",
+      is_active: true,
+    }));
+
+    const { error: insertError } = await supabaseClient
+      .from("accounts")
+      .insert(accountsToInsert);
+
+    if (insertError) {
+      logStep("Failed to insert accounts", { error: insertError.message });
+      throw new Error(`Failed to save accounts: ${insertError.message}`);
+    }
+
+    logStep("Accounts saved successfully");
+
+    return new Response(JSON.stringify({ 
+      success: true,
+      accounts_count: accountsData.accounts.length 
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logStep("ERROR", { message: errorMessage });
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+});
+
+function mapPlaidAccountType(plaidType: string): string {
+  const typeMap: Record<string, string> = {
+    depository: "checking",
+    credit: "credit",
+    loan: "loan",
+    investment: "investment",
+  };
+  return typeMap[plaidType] || "other";
+}
