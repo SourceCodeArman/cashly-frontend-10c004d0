@@ -19,7 +19,8 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
   );
 
   try {
@@ -99,6 +100,66 @@ serve(async (req) => {
       amountDue: upcomingInvoice.amount_due,
       periodEnd: upcomingInvoice.period_end
     });
+
+    // Map product ID to tier
+    let newTier: 'free' | 'pro' | 'premium' = 'free';
+    const productId = updatedSubscription.items?.data?.[0]?.price?.product as string | undefined;
+    if (productId === 'prod_TQwmCxRJiMH3Nv' || productId === 'prod_Szh5jnk7eDYrvR') {
+      newTier = 'pro';
+    } else if (productId === 'prod_TQwnEiqlldcXk0') {
+      newTier = 'premium';
+    }
+
+    // Convert period end
+    let nextPeriodEndIso: string | null = null;
+    try {
+      const toIso = (ts: number) => new Date(ts * 1000).toISOString();
+      if (typeof updatedSubscription.current_period_end === 'number') {
+        nextPeriodEndIso = toIso(updatedSubscription.current_period_end);
+      } else {
+        const fullSub = await stripe.subscriptions.retrieve(updatedSubscription.id);
+        if (typeof fullSub.current_period_end === 'number') {
+          nextPeriodEndIso = toIso(fullSub.current_period_end);
+        }
+      }
+    } catch (_) {}
+
+    // Persist to DB (profile + subscriptions)
+    const { error: profileErr } = await supabaseClient
+      .from('profiles')
+      .update({ subscription_tier: newTier, subscription_status: 'active' })
+      .eq('user_id', user.id);
+    if (profileErr) logStep('Failed to update profile after plan change', { error: profileErr.message });
+
+    const subData = {
+      user_id: user.id,
+      plan: newTier,
+      status: updatedSubscription.status as 'active' | 'canceled' | 'past_due' | 'trialing',
+      stripe_subscription_id: updatedSubscription.id,
+      stripe_customer_id: customerId,
+      current_period_end: nextPeriodEndIso,
+      billing_cycle: updatedSubscription.items.data[0].price.recurring?.interval || 'month',
+    };
+
+    const { data: existing } = await supabaseClient
+      .from('subscriptions')
+      .select('subscription_id')
+      .eq('user_id', user.id)
+      .eq('stripe_subscription_id', updatedSubscription.id)
+      .maybeSingle();
+
+    if (existing) {
+      const { error: updErr } = await supabaseClient
+        .from('subscriptions')
+        .update(subData)
+        .eq('subscription_id', existing.subscription_id);
+      if (updErr) logStep('Failed to update subscription row', { error: updErr.message });
+    } else {
+      const { error: insErr } = await supabaseClient
+        .from('subscriptions')
+        .insert(subData);
+      if (insErr) logStep('Failed to insert subscription row', { error: insErr.message });
+    }
 
     return new Response(JSON.stringify({
       success: true,
