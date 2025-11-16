@@ -3,7 +3,7 @@ import { subscriptionService } from '@/services/subscriptionService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, CreditCard, RefreshCw, Settings } from 'lucide-react';
+import { Check, CreditCard, RefreshCw, Settings, Calendar } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
@@ -118,10 +118,31 @@ export default function Subscription() {
                 {currentSubscription.status}
               </Badge>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Renews:</span>
-              <span>{new Date(currentSubscription.current_period_end).toLocaleDateString()}</span>
-            </div>
+            {currentSubscription.current_period_end && (
+              <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  Subscription Period
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Renews on:</span>
+                  <span className="text-sm font-medium">
+                    {new Date(currentSubscription.current_period_end).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Days remaining:</span>
+                  <span className="text-sm font-medium">
+                    {Math.max(0, Math.ceil((new Date(currentSubscription.current_period_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days
+                  </span>
+                </div>
+              </div>
+            )}
             <Button
               variant="outline"
               className="w-full"
@@ -148,10 +169,41 @@ export default function Subscription() {
               <span className="text-muted-foreground">Current Tier:</span>
               <Badge>{subscriptionStatus.tier}</Badge>
             </div>
-            {subscriptionStatus.subscription_end && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Renews:</span>
-                <span>{new Date(subscriptionStatus.subscription_end).toLocaleDateString()}</span>
+            {subscriptionStatus.subscription_end ? (
+              <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  Subscription Period
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Renews on:</span>
+                  <span className="text-sm font-medium">
+                    {new Date(subscriptionStatus.subscription_end).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Days remaining:</span>
+                  <span className="text-sm font-medium">
+                    {Math.max(0, Math.ceil((new Date(subscriptionStatus.subscription_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  Subscription Period
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {subscriptionStatus.tier === 'free' 
+                    ? 'No expiration - free plan' 
+                    : 'Active subscription with no expiration date'}
+                </p>
               </div>
             )}
             <Button
