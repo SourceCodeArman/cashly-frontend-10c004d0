@@ -48,7 +48,7 @@ export default function Transactions() {
   });
 
   const filteredTransactions = transactionsData?.results.filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase())
+    (t.merchant_name || t.description || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -68,7 +68,7 @@ export default function Transactions() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-destructive">
-                {formatCurrency(stats.total_spending)}
+                {formatCurrency(stats.expense_total)}
               </p>
             </CardContent>
           </Card>
@@ -80,7 +80,7 @@ export default function Transactions() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-success">
-                {formatCurrency(stats.total_income)}
+                {formatCurrency(stats.income_total)}
               </p>
             </CardContent>
           </Card>
@@ -91,7 +91,7 @@ export default function Transactions() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-primary">{stats.transactions_count}</p>
+              <p className="text-2xl font-bold text-primary">{stats.total_count}</p>
             </CardContent>
           </Card>
         </div>
@@ -122,7 +122,7 @@ export default function Transactions() {
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {categories?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
+                    <SelectItem key={cat.category_id} value={cat.category_id}>
                       {cat.name}
                     </SelectItem>
                   ))}
