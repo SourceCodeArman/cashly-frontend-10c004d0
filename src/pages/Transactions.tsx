@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 export default function Transactions() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   const { data: transactionsData, isLoading } = useQuery({
     queryKey: ['transactions', page, categoryFilter],
@@ -23,7 +23,7 @@ export default function Transactions() {
       transactionService.getTransactions({
         page,
         page_size: 20,
-        category: categoryFilter || undefined,
+        category: categoryFilter === 'all' ? undefined : categoryFilter,
       }),
   });
 
@@ -120,7 +120,7 @@ export default function Transactions() {
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories?.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
