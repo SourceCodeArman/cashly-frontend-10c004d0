@@ -45,8 +45,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-2">
+      <SidebarHeader className={`border-b border-sidebar-border ${collapsed ? 'p-3' : 'p-4'}`}>
+        <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
           <div className="h-8 w-8 flex-shrink-0 rounded-lg bg-gradient-primary flex items-center justify-center">
             <TrendingUp className="h-5 w-5 text-primary-foreground" />
           </div>
