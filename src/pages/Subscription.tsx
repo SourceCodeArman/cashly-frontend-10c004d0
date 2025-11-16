@@ -1,16 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { subscriptionService } from '@/services/subscriptionService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, CreditCard } from 'lucide-react';
+import { Check, CreditCard, RefreshCw, Settings } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { loadStripe } from '@stripe/stripe-js';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
+import { useEffect } from 'react';
 
 export default function Subscription() {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const currentTier = user?.subscription_tier || 'free';
 
   const { data: config } = useQuery({
@@ -23,7 +24,48 @@ export default function Subscription() {
     queryFn: subscriptionService.getSubscriptions,
   });
 
+  const { data: subscriptionStatus, refetch: refetchStatus } = useQuery({
+    queryKey: ['subscription-status'],
+    queryFn: subscriptionService.checkSubscription,
+  });
+
+  // Check subscription status on mount and periodically
+  useEffect(() => {
+    refetchStatus();
+    const interval = setInterval(() => {
+      refetchStatus();
+    }, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [refetchStatus]);
+
   const currentSubscription = subscriptions?.[0];
+
+  const checkoutMutation = useMutation({
+    mutationFn: async (priceId: string) => {
+      const result = await subscriptionService.createCheckoutSession(priceId);
+      return result;
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.open(data.url, '_blank');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to start checkout');
+    },
+  });
+
+  const portalMutation = useMutation({
+    mutationFn: subscriptionService.openCustomerPortal,
+    onSuccess: (data) => {
+      if (data.url) {
+        window.open(data.url, '_blank');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to open customer portal');
+    },
+  });
 
   const getButtonText = (tierId: string) => {
     if (currentTier === tierId) {
@@ -39,29 +81,12 @@ export default function Subscription() {
     return currentTier === tierId;
   };
 
-  const handleSubscribe = async (priceId: string) => {
-    try {
-      if (!config?.publishable_key) {
-        toast.error('Payment configuration not available');
-        return;
-      }
-
-      const response = await subscriptionService.createSubscription({ price_id: priceId } as any);
-      
-      const stripe = await loadStripe(config.publishable_key);
-      if (!stripe) {
-        toast.error('Failed to load payment system');
-        return;
-      }
-
-      // @ts-ignore - redirectToCheckout exists but types may not match
-      const result = await stripe.redirectToCheckout({ sessionId: response.sessionId });
-      
-      if (result && result.error) {
-        toast.error(result.error.message || 'Failed to start checkout');
-      }
-    } catch (error) {
-      toast.error('Failed to start checkout');
+  const handleSubscribe = async (tierId: string, priceId: string) => {
+    if (tierId === 'free') {
+      // Open customer portal for downgrades
+      portalMutation.mutate();
+    } else {
+      checkoutMutation.mutate(priceId);
     }
   };
 
@@ -82,7 +107,7 @@ export default function Subscription() {
               Current Subscription
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-4">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Plan:</span>
               <Badge>{currentSubscription.plan}</Badge>
@@ -97,9 +122,61 @@ export default function Subscription() {
               <span className="text-muted-foreground">Renews:</span>
               <span>{new Date(currentSubscription.current_period_end).toLocaleDateString()}</span>
             </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => portalMutation.mutate()}
+              disabled={portalMutation.isPending}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Subscription
+            </Button>
           </CardContent>
         </Card>
       )}
+
+      {subscriptionStatus && subscriptionStatus.subscribed && !currentSubscription && (
+        <Card className="max-w-md mx-auto border-primary shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Subscription Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Current Tier:</span>
+              <Badge>{subscriptionStatus.tier}</Badge>
+            </div>
+            {subscriptionStatus.subscription_end && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Renews:</span>
+                <span>{new Date(subscriptionStatus.subscription_end).toLocaleDateString()}</span>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => portalMutation.mutate()}
+              disabled={portalMutation.isPending}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Subscription
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex justify-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetchStatus()}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh Status
+        </Button>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
         {(config?.tiers ?? []).map((tier, index) => (
@@ -107,14 +184,19 @@ export default function Subscription() {
             key={tier.id}
             className={`flex flex-col border-border shadow-soft hover:shadow-md transition-all ${
               index === 1 ? 'border-primary ring-2 ring-primary/20' : ''
-            }`}
+            } ${currentTier === tier.id ? 'ring-2 ring-success' : ''}`}
           >
             <CardHeader>
               <div className="flex justify-between items-start min-h-[32px]">
                 <CardTitle className="text-xl">{tier.name}</CardTitle>
-                {index === 1 && (
-                  <Badge className="bg-gradient-primary">Popular</Badge>
-                )}
+                <div className="flex flex-col gap-1 items-end">
+                  {index === 1 && (
+                    <Badge className="bg-gradient-primary">Popular</Badge>
+                  )}
+                  {currentTier === tier.id && (
+                    <Badge variant="outline" className="border-success text-success">Active</Badge>
+                  )}
+                </div>
               </div>
               <div className="mt-4">
                 <span className="text-4xl font-bold">{formatCurrency(tier.price)}</span>
@@ -133,10 +215,10 @@ export default function Subscription() {
               <Button
                 className={`w-full ${index === 1 ? 'bg-gradient-primary' : ''}`}
                 variant={index === 1 ? 'default' : 'outline'}
-                onClick={() => handleSubscribe(tier.price_id)}
-                disabled={isButtonDisabled(tier.id)}
+                onClick={() => handleSubscribe(tier.id, tier.price_id)}
+                disabled={isButtonDisabled(tier.id) || checkoutMutation.isPending || portalMutation.isPending}
               >
-                {getButtonText(tier.id)}
+                {checkoutMutation.isPending || portalMutation.isPending ? 'Loading...' : getButtonText(tier.id)}
               </Button>
             </CardContent>
           </Card>
