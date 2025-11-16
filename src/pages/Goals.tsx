@@ -49,8 +49,8 @@ export default function Goals() {
     });
   };
 
-  const activeGoals = goals?.filter((g) => g.status === 'active') || [];
-  const completedGoals = goals?.filter((g) => g.status === 'completed') || [];
+  const activeGoals = goals?.filter((g) => g.is_active && !g.is_completed) || [];
+  const completedGoals = goals?.filter((g) => g.is_completed) || [];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
