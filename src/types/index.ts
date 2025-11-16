@@ -2,9 +2,12 @@
 export interface User {
   id: string;
   email: string;
-  first_name: string;
-  last_name: string;
-  created_at: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  subscription_tier?: 'free' | 'pro' | 'premium';
+  subscription_status?: 'active' | 'canceled' | 'past_due' | 'trialing';
+  created_at?: string;
 }
 
 export interface AuthTokens {
@@ -26,21 +29,21 @@ export interface RegisterRequest {
 
 // Account types
 export interface Account {
-  id: string;
-  plaid_account_id: string;
-  name: string;
-  official_name: string | null;
-  type: string;
-  subtype: string;
-  mask: string | null;
-  current_balance: number;
-  available_balance: number | null;
-  currency_code: string;
+  account_id: string;
+  user_id: string;
+  plaid_account_id?: string;
+  plaid_item_id?: string;
   institution_name: string;
-  institution_id: string;
+  institution_id?: string;
+  custom_name?: string;
+  account_type: 'checking' | 'savings' | 'credit' | 'investment' | 'loan' | 'other';
+  account_number_masked?: string;
+  balance: number;
+  currency: string;
   is_active: boolean;
-  last_synced_at: string;
+  plaid_access_token?: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface LinkTokenResponse {
@@ -62,63 +65,97 @@ export interface PlaidConnectRequest {
 
 // Transaction types
 export interface Transaction {
-  id: string;
-  plaid_transaction_id: string;
-  account: string;
+  transaction_id: string;
+  user_id: string;
+  account_id: string;
+  plaid_transaction_id?: string;
   amount: number;
   date: string;
-  name: string;
-  merchant_name: string | null;
-  category: string | null;
+  merchant_name?: string;
+  description?: string;
+  category_id?: string;
+  plaid_category?: string[];
+  is_recurring: boolean;
+  is_transfer: boolean;
   pending: boolean;
-  payment_channel: string;
   created_at: string;
+  updated_at: string;
+  category?: {
+    category_id: string;
+    name: string;
+    icon?: string;
+    color?: string;
+  };
+  account?: {
+    account_id: string;
+    institution_name: string;
+    custom_name?: string;
+  };
 }
 
 export interface TransactionStats {
-  total_spending: number;
-  total_income: number;
-  spending_by_category: Record<string, number>;
-  transactions_count: number;
+  total_count: number;
+  expense_count: number;
+  income_count: number;
+  expense_total: number;
+  income_total: number;
+  net: number;
 }
 
 // Category types
 export interface Category {
-  id: string;
+  category_id: string;
+  user_id?: string;
   name: string;
-  color: string;
-  icon: string | null;
-  is_default: boolean;
+  type: 'income' | 'expense';
+  icon?: string;
+  color?: string;
+  is_system_category: boolean;
+  parent_category?: string;
   created_at: string;
 }
 
 // Goal types
 export interface Goal {
-  id: string;
+  goal_id: string;
+  user_id: string;
   name: string;
   target_amount: number;
   current_amount: number;
-  target_date: string;
-  category: string | null;
-  status: 'active' | 'completed' | 'paused';
+  deadline?: string;
+  goal_type: 'savings' | 'debt_payoff' | 'investment';
+  monthly_contribution?: number;
+  inferred_category_id?: string;
+  destination_account_id?: string;
+  transfer_authorized: boolean;
+  is_active: boolean;
+  is_completed: boolean;
+  contribution_rules?: any;
   created_at: string;
   updated_at: string;
 }
 
 export interface GoalContribution {
+  contribution_id?: string;
+  goal_id: string;
+  user_id?: string;
   amount: number;
+  date: string;
+  source?: string;
+  note?: string;
+  created_at?: string;
 }
 
 export interface GoalForecast {
-  projected_completion_date: string;
-  monthly_contribution_needed: number;
-  on_track: boolean;
+  estimated_completion_date: string;
+  monthly_recommendation: number;
+  is_on_track: boolean;
 }
 
 // Subscription types
 export interface SubscriptionConfig {
   publishable_key: string;
-  tiers: SubscriptionTier[];
+  tiers?: SubscriptionTier[];
 }
 
 export interface SubscriptionTier {
@@ -130,50 +167,63 @@ export interface SubscriptionTier {
 }
 
 export interface Subscription {
-  id: string;
-  tier: string;
-  status: 'active' | 'canceled' | 'past_due';
-  current_period_end: string;
+  subscription_id: string;
+  user_id: string;
+  stripe_subscription_id?: string;
+  stripe_customer_id?: string;
+  status: 'active' | 'canceled' | 'past_due' | 'trialing';
+  plan: 'free' | 'pro' | 'premium';
+  billing_cycle?: string;
+  current_period_end?: string;
+  trial_end?: string;
   cancel_at_period_end: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface CreateSubscriptionRequest {
-  price_id: string;
+  payment_method_id: string;
+  plan: string;
+  billing_cycle: string;
+  trial_enabled?: boolean;
 }
 
 // Notification types
 export interface Notification {
   id: string;
+  user_id: string;
+  type: 'goal_reminder' | 'transaction_alert' | 'subscription_update' | 'system';
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
   is_read: boolean;
+  metadata?: any;
   created_at: string;
 }
 
 export interface UnreadCountResponse {
-  unread_count: number;
+  count: number;
 }
 
 // Dashboard types
 export interface DashboardData {
-  total_balance: number;
-  total_spending: number;
-  total_income: number;
-  spending_trend: Array<{
-    date: string;
-    amount: number;
-  }>;
+  account_balance: {
+    total: number;
+    by_account: Array<{
+      name: string;
+      balance: number;
+    }>;
+  };
   recent_transactions: Transaction[];
-  upcoming_bills: Array<{
-    name: string;
-    amount: number;
-    due_date: string;
-  }>;
-  savings_goals_summary: {
-    total_saved: number;
-    total_target: number;
-    active_goals_count: number;
+  monthly_spending: {
+    total: number;
+    by_category: Array<{
+      name: string;
+      amount: number;
+    }>;
+  };
+  goals: Goal[];
+  category_chart_data: {
+    labels: string[];
+    data: number[];
   };
 }
