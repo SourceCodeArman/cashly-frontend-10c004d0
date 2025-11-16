@@ -1,73 +1,169 @@
-# Welcome to your Lovable project
+# Cashly - Personal Finance App
 
-## Project info
+A modern personal finance application built with React 19, TypeScript, and Tailwind CSS.
 
-**URL**: https://lovable.dev/projects/c97b6eb1-e08f-4a8e-803d-133a11cc063d
+## Features
 
-## How can I edit this code?
+- 🔐 **Authentication** - Secure login and registration with JWT
+- 💳 **Account Management** - Connect bank accounts via Plaid
+- 📊 **Transaction Tracking** - View and categorize your transactions
+- 🎯 **Savings Goals** - Set and track financial goals
+- 💰 **Subscription Management** - Stripe-powered subscription handling
+- 🔔 **Notifications** - Stay updated on your finances
+- 📱 **Responsive Design** - Beautiful UI that works on all devices
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React 19, TypeScript, Vite
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand
+- **Data Fetching**: React Query (TanStack Query)
+- **API Client**: Axios
+- **UI Components**: Shadcn UI
+- **Charts**: Recharts
+- **Payments**: Stripe.js
+- **Banking**: Plaid Link
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/c97b6eb1-e08f-4a8e-803d-133a11cc063d) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js 18+ and npm
+- Backend API running (Django + DRF)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Clone the repository:
+```bash
+git clone <your-repo-url>
+cd cashly
+```
 
-Follow these steps:
+2. Install dependencies:
+```bash
+npm install
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. Create a `.env` file in the root directory:
+```env
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_key
+VITE_PLAID_ENV=sandbox
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+4. Start the development server:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Building for Production
 
-**Use GitHub Codespaces**
+```bash
+npm run build
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The production-ready files will be in the `dist` directory.
 
-## What technologies are used for this project?
+## Project Structure
 
-This project is built with:
+```
+src/
+├── components/       # Reusable UI components
+│   ├── ui/          # Shadcn UI components
+│   ├── AppSidebar.tsx
+│   └── Header.tsx
+├── pages/           # Page components
+│   ├── Login.tsx
+│   ├── Dashboard.tsx
+│   ├── Accounts.tsx
+│   └── ...
+├── layouts/         # Layout components
+│   ├── ProtectedLayout.tsx
+│   └── AuthLayout.tsx
+├── services/        # API service layer
+│   ├── authService.ts
+│   ├── accountService.ts
+│   └── ...
+├── store/           # Zustand stores
+│   ├── authStore.ts
+│   └── uiStore.ts
+├── hooks/           # Custom React hooks
+├── types/           # TypeScript type definitions
+├── lib/             # Utility functions and configs
+│   ├── axios.ts
+│   ├── queryClient.ts
+│   └── utils.ts
+└── App.tsx          # Main app component
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Environment Variables
 
-## How can I deploy this project?
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:8000/api/v1` |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | `pk_test_...` |
+| `VITE_PLAID_ENV` | Plaid environment | `sandbox`, `development`, or `production` |
 
-Simply open [Lovable](https://lovable.dev/projects/c97b6eb1-e08f-4a8e-803d-133a11cc063d) and click on Share -> Publish.
+## Available Scripts
 
-## Can I connect a custom domain to my Lovable project?
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
-Yes, you can!
+## API Integration
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+The app connects to a Django backend with the following endpoints:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- **Auth**: `/auth/login`, `/auth/register`, `/auth/profile`
+- **Accounts**: `/accounts/` (Plaid integration)
+- **Transactions**: `/transactions/transactions/`
+- **Goals**: `/goals/`
+- **Subscriptions**: `/subscriptions/` (Stripe integration)
+- **Notifications**: `/notifications/`
+- **Dashboard**: `/dashboard/`
+
+## Features Overview
+
+### Authentication
+- Secure JWT-based authentication
+- Automatic token refresh
+- Protected routes
+
+### Account Management
+- Connect bank accounts via Plaid Link
+- View account balances
+- Sync transactions
+- Transfer between accounts
+
+### Transaction Management
+- View all transactions
+- Filter by date, category, merchant
+- Categorize transactions
+- Spending analytics
+
+### Savings Goals
+- Create and track goals
+- Visual progress tracking
+- Contribution management
+- Goal forecasting
+
+### Subscription Management
+- Stripe Checkout integration
+- Multiple pricing tiers
+- Subscription management
+- Cancellation handling
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is private and confidential.
