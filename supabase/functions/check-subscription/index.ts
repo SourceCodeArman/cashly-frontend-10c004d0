@@ -116,11 +116,13 @@ serve(async (req) => {
         productId = subscription.items.data[0].price.product as string;
         logStep("Determined product ID", { productId });
         
-        // Map product ID to tier
-        if (productId === 'prod_TQwmCxRJiMH3Nv') {
+        // Map product ID to tier - supporting both old and new products
+        if (productId === 'prod_TQwmCxRJiMH3Nv' || productId === 'prod_Szh5jnk7eDYrvR') {
           tier = 'pro';
         } else if (productId === 'prod_TQwnEiqlldcXk0') {
           tier = 'premium';
+        } else {
+          logStep("Unknown product ID, defaulting to free", { productId });
         }
       } else {
         logStep("No product ID found in subscription");
