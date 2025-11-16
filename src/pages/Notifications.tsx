@@ -87,12 +87,12 @@ export default function Notifications() {
                       {!notification.is_read && <Badge variant="default">New</Badge>}
                       <Badge
                         variant={
-                      {notification.type === 'goal_reminder' || notification.type === 'system'
-                        ? 'default'
-                        : notification.type === 'transaction_alert'
-                        ? 'destructive'
-                        : 'secondary'
-                      }
+                          notification.type === 'goal_reminder' || notification.type === 'system'
+                            ? 'default'
+                            : notification.type === 'transaction_alert'
+                            ? 'destructive'
+                            : 'secondary'
+                        }
                       >
                         {notification.type}
                       </Badge>
