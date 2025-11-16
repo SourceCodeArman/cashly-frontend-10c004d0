@@ -22,6 +22,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
 
   initAuth: async () => {
+    set({ isLoading: true });
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -30,7 +31,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           .from('profiles')
           .select('*')
           .eq('user_id', session.user.id)
-          .single();
+          .maybeSingle();
 
         if (profile) {
           set({
@@ -44,7 +45,6 @@ export const useAuthStore = create<AuthState>((set) => ({
               subscription_status: profile.subscription_status,
             },
             isAuthenticated: true,
-            isLoading: false,
           });
         } else {
           // Fallback when profile row doesn't exist yet
@@ -56,15 +56,16 @@ export const useAuthStore = create<AuthState>((set) => ({
               subscription_status: 'active',
             },
             isAuthenticated: true,
-            isLoading: false,
           });
         }
       } else {
-        set({ user: null, isAuthenticated: false, isLoading: false });
+        set({ user: null, isAuthenticated: false });
       }
     } catch (error) {
       console.error('Auth initialization error:', error);
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({ user: null, isAuthenticated: false });
+    } finally {
+      set({ isLoading: false });
     }
   },
 
@@ -75,40 +76,44 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 // Listen to auth state changes
-supabase.auth.onAuthStateChange(async (event, session) => {
+supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_IN' && session?.user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .single();
+    // Set basic user immediately to avoid UI blocking
+    useAuthStore.setState({
+      user: {
+        id: session.user.id,
+        email: session.user.email!,
+        subscription_tier: 'free',
+        subscription_status: 'active',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+    });
 
-    if (profile) {
-      useAuthStore.setState({
-        user: {
-          id: session.user.id,
-          email: session.user.email!,
-          username: profile.username,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          subscription_tier: profile.subscription_tier,
-          subscription_status: profile.subscription_status,
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } else {
-      useAuthStore.setState({
-        user: {
-          id: session.user.id,
-          email: session.user.email!,
-          subscription_tier: 'free',
-          subscription_status: 'active',
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    }
+    // Defer profile fetch to avoid deadlocks inside the callback
+    setTimeout(async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        useAuthStore.setState({
+          user: {
+            id: session.user.id,
+            email: session.user.email!,
+            username: profile.username,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            subscription_tier: profile.subscription_tier,
+            subscription_status: profile.subscription_status,
+          },
+          isAuthenticated: true,
+          isLoading: false,
+        });
+      }
+    }, 0);
   } else if (event === 'SIGNED_OUT') {
     useAuthStore.setState({ user: null, isAuthenticated: false, isLoading: false });
   }
