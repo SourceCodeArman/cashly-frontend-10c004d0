@@ -76,6 +76,9 @@ serve(async (req) => {
       status: "active",
       limit: 1,
     });
+    
+    logStep("Fetched subscriptions", { count: subscriptions.data.length });
+    
     const hasActiveSub = subscriptions.data.length > 0;
     let productId = null;
     let subscriptionEnd = null;
@@ -83,17 +86,44 @@ serve(async (req) => {
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      logStep("Processing subscription", { 
+        subscriptionId: subscription.id, 
+        periodEnd: subscription.current_period_end,
+        periodEndType: typeof subscription.current_period_end 
+      });
+      
+      // Safely convert timestamp to ISO string
+      try {
+        if (subscription.current_period_end && typeof subscription.current_period_end === 'number') {
+          const timestamp = subscription.current_period_end * 1000;
+          logStep("Converting timestamp", { timestamp, original: subscription.current_period_end });
+          subscriptionEnd = new Date(timestamp).toISOString();
+          logStep("Converted date", { subscriptionEnd });
+        } else {
+          logStep("Invalid period end format", { periodEnd: subscription.current_period_end });
+        }
+      } catch (dateError) {
+        logStep("Date conversion error", { 
+          error: dateError instanceof Error ? dateError.message : String(dateError),
+          periodEnd: subscription.current_period_end 
+        });
+      }
+      
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
       
-      productId = subscription.items.data[0].price.product as string;
-      logStep("Determined product ID", { productId });
-      
-      // Map product ID to tier
-      if (productId === 'prod_TQwmCxRJiMH3Nv') {
-        tier = 'pro';
-      } else if (productId === 'prod_TQwnEiqlldcXk0') {
-        tier = 'premium';
+      // Get product ID safely
+      if (subscription.items?.data?.[0]?.price?.product) {
+        productId = subscription.items.data[0].price.product as string;
+        logStep("Determined product ID", { productId });
+        
+        // Map product ID to tier
+        if (productId === 'prod_TQwmCxRJiMH3Nv') {
+          tier = 'pro';
+        } else if (productId === 'prod_TQwnEiqlldcXk0') {
+          tier = 'premium';
+        }
+      } else {
+        logStep("No product ID found in subscription");
       }
       
       // Update user profile with subscription info
