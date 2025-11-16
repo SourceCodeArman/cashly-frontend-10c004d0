@@ -87,12 +87,12 @@ export default function Subscription() {
         {(config?.tiers ?? []).map((tier, index) => (
           <Card
             key={tier.id}
-            className={`border-border shadow-soft hover:shadow-md transition-all ${
+            className={`flex flex-col border-border shadow-soft hover:shadow-md transition-all ${
               index === 1 ? 'border-primary ring-2 ring-primary/20' : ''
             }`}
           >
             <CardHeader>
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start min-h-[32px]">
                 <CardTitle className="text-xl">{tier.name}</CardTitle>
                 {index === 1 && (
                   <Badge className="bg-gradient-primary">Popular</Badge>
@@ -103,11 +103,11 @@ export default function Subscription() {
                 <span className="text-muted-foreground">/month</span>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-2">
+            <CardContent className="flex flex-col flex-1 space-y-4">
+              <ul className="space-y-2 flex-1">
                 {tier.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-success" />
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
                     <span>{feature}</span>
                   </li>
                 ))}
