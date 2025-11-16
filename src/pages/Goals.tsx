@@ -136,16 +136,16 @@ export default function Goals() {
                   const progress = (goal.current_amount / goal.target_amount) * 100;
                   return (
                     <Card
-                      key={goal.id}
+                      key={goal.goal_id}
                       className="border-border shadow-soft hover:shadow-md transition-all cursor-pointer"
-                      onClick={() => navigate(`/goals/${goal.id}`)}
+                      onClick={() => navigate(`/goals/${goal.goal_id}`)}
                     >
                       <CardHeader>
                         <div className="flex items-start justify-between">
                           <div>
                             <CardTitle className="text-lg">{goal.name}</CardTitle>
                             <CardDescription>
-                              Target: {new Date(goal.target_date).toLocaleDateString()}
+                              Target: {goal.deadline ? new Date(goal.deadline).toLocaleDateString() : 'No deadline'}
                             </CardDescription>
                           </div>
                           <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center">
@@ -188,7 +188,7 @@ export default function Goals() {
               <h2 className="text-xl font-semibold">Completed Goals</h2>
               <div className="grid gap-6 md:grid-cols-2">
                 {completedGoals.map((goal) => (
-                  <Card key={goal.id} className="border-success/30 bg-success/5">
+                  <Card key={goal.goal_id} className="border-success/30 bg-success/5">
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">
                         {goal.name}
