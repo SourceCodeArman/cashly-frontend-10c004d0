@@ -126,17 +126,17 @@ export default function Accounts() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map((account) => (
             <Card
-              key={account.id}
+              key={account.account_id}
               className="border-border shadow-soft hover:shadow-md transition-all cursor-pointer"
-              onClick={() => navigate(`/accounts/${account.id}`)}
+              onClick={() => navigate(`/accounts/${account.account_id}`)}
             >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{account.name}</CardTitle>
+                    <CardTitle className="text-lg">{account.custom_name || account.institution_name}</CardTitle>
                     <CardDescription className="mt-1">
                       {account.institution_name}
-                      {account.mask && ` •••• ${account.mask}`}
+                      {account.account_number_masked && ` •••• ${account.account_number_masked}`}
                     </CardDescription>
                   </div>
                   <Badge variant={account.is_active ? 'default' : 'secondary'} className="ml-2">
@@ -146,29 +146,21 @@ export default function Accounts() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Balance</p>
+                  <p className="text-sm text-muted-foreground">Balance</p>
                   <p className="text-2xl font-bold text-primary">
-                    {formatCurrency(account.current_balance)}
+                    {formatCurrency(account.balance)}
                   </p>
                 </div>
-                {account.available_balance !== null && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Available</p>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(account.available_balance)}
-                    </p>
-                  </div>
-                )}
                 <div className="pt-2 border-t border-border flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">
-                    Last synced: {new Date(account.last_synced_at).toLocaleDateString()}
+                    Last synced: {new Date(account.updated_at).toLocaleDateString()}
                   </span>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={(e) => {
                       e.stopPropagation();
-                      syncMutation.mutate(account.id);
+                      syncMutation.mutate(account.account_id);
                     }}
                     disabled={syncMutation.isPending}
                   >

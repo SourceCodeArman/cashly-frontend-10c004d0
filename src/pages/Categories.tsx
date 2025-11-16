@@ -10,8 +10,8 @@ export default function Categories() {
     queryFn: categoryService.getCategories,
   });
 
-  const defaultCategories = categories?.filter((c) => c.is_default) || [];
-  const customCategories = categories?.filter((c) => !c.is_default) || [];
+  const defaultCategories = categories?.filter((c) => c.is_system_category) || [];
+  const customCategories = categories?.filter((c) => !c.is_system_category) || [];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -25,7 +25,7 @@ export default function Categories() {
           <h2 className="text-xl font-semibold">Default Categories</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {defaultCategories.map((category) => (
-              <Card key={category.id} className="border-border shadow-soft">
+              <Card key={category.category_id} className="border-border shadow-soft">
                 <CardContent className="flex items-center gap-3 p-4">
                   <div
                     className="h-10 w-10 rounded-full flex items-center justify-center"
@@ -50,7 +50,7 @@ export default function Categories() {
             <h2 className="text-xl font-semibold">Custom Categories</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {customCategories.map((category) => (
-                <Card key={category.id} className="border-border shadow-soft">
+                <Card key={category.category_id} className="border-border shadow-soft">
                   <CardContent className="flex items-center gap-3 p-4">
                     <div
                       className="h-10 w-10 rounded-full flex items-center justify-center"

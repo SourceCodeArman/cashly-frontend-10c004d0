@@ -37,7 +37,7 @@ export const subscriptionService = {
     return data;
   },
 
-  updateSubscription: async (id: string, updates: { price_id: string }): Promise<Subscription> => {
+  updateSubscription: async (id: string, updates: Partial<Subscription>): Promise<Subscription> => {
     const { data, error } = await supabase
       .from('subscriptions')
       .update(updates)

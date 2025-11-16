@@ -85,15 +85,7 @@ export default function Notifications() {
                     <div className="flex items-center gap-2 mb-1">
                       <CardTitle className="text-base">{notification.title}</CardTitle>
                       {!notification.is_read && <Badge variant="default">New</Badge>}
-                      <Badge
-                        variant={
-                          notification.type === 'success'
-                            ? 'default'
-                            : notification.type === 'error'
-                            ? 'destructive'
-                            : 'secondary'
-                        }
-                      >
+                      <Badge variant="secondary">
                         {notification.type}
                       </Badge>
                     </div>
