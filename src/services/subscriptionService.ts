@@ -9,7 +9,7 @@ export const subscriptionService = {
         {
           id: 'free',
           name: 'Free',
-          price_id: 'price_free',
+          price_id: 'free',
           price: 0,
           features: [
             'Up to 3 connected accounts',
@@ -21,7 +21,7 @@ export const subscriptionService = {
         {
           id: 'pro',
           name: 'Pro',
-          price_id: import.meta.env.VITE_STRIPE_PRO_PRICE_ID || 'price_pro',
+          price_id: 'price_1SU4sS9FH3KQIIeTUG3QLP7T',
           price: 9.99,
           features: [
             'Unlimited connected accounts',
@@ -35,7 +35,7 @@ export const subscriptionService = {
         {
           id: 'premium',
           name: 'Premium',
-          price_id: import.meta.env.VITE_STRIPE_PREMIUM_PRICE_ID || 'price_premium',
+          price_id: 'price_1SU4th9FH3KQIIeT32lJfeW2',
           price: 19.99,
           features: [
             'Everything in Pro',
@@ -99,6 +99,34 @@ export const subscriptionService = {
       .eq('subscription_id', id)
       .select()
       .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  createCheckoutSession: async (priceId: string): Promise<{ url: string }> => {
+    const { data, error } = await supabase.functions.invoke('create-checkout', {
+      body: { priceId },
+    });
+
+    if (error) throw error;
+    return data;
+  },
+
+  checkSubscription: async (): Promise<{
+    subscribed: boolean;
+    tier: string;
+    product_id: string | null;
+    subscription_end: string | null;
+  }> => {
+    const { data, error } = await supabase.functions.invoke('check-subscription');
+
+    if (error) throw error;
+    return data;
+  },
+
+  openCustomerPortal: async (): Promise<{ url: string }> => {
+    const { data, error } = await supabase.functions.invoke('customer-portal');
 
     if (error) throw error;
     return data;
