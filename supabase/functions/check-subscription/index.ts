@@ -138,6 +138,40 @@ serve(async (req) => {
         .eq('user_id', user.id);
         
       logStep("Updated user profile", { tier });
+
+      // Save/update subscription in database
+      const subData = {
+        user_id: user.id,
+        plan: tier as 'free' | 'pro' | 'premium',
+        status: subscription.status as 'active' | 'canceled' | 'past_due' | 'trialing',
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: customerId,
+        current_period_end: subscriptionEnd,
+        billing_cycle: subscription.items.data[0].price.recurring?.interval || 'month',
+      };
+
+      // Try to update existing subscription first
+      const { data: existingSubscription } = await supabaseClient
+        .from('subscriptions')
+        .select('subscription_id')
+        .eq('user_id', user.id)
+        .eq('stripe_subscription_id', subscription.id)
+        .single();
+
+      if (existingSubscription) {
+        // Update existing
+        await supabaseClient
+          .from('subscriptions')
+          .update(subData)
+          .eq('subscription_id', existingSubscription.subscription_id);
+        logStep("Updated existing subscription in database");
+      } else {
+        // Insert new
+        await supabaseClient
+          .from('subscriptions')
+          .insert(subData);
+        logStep("Inserted new subscription in database");
+      }
     } else {
       logStep("No active subscription found");
       
