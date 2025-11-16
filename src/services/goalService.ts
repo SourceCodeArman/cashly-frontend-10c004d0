@@ -84,9 +84,7 @@ export const goalService = {
 
     // Update goal current_amount
     const fetchedGoal = await this.getGoal(id);
-    if (!fetchedGoal) throw new Error('Goal not found');
-    
-    const newAmount = parseFloat(fetchedGoal.current_amount.toString()) + parseFloat(contributionData.amount.toString());
+    const newAmount = parseFloat(fetchedGoal!.current_amount.toString()) + parseFloat(contributionData.amount.toString());
     
     const { data, error } = await supabase
       .from('goals')
