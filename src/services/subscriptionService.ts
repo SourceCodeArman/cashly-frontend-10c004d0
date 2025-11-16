@@ -5,6 +5,49 @@ export const subscriptionService = {
   getConfig: async (): Promise<SubscriptionConfig> => {
     return {
       publishable_key: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
+      tiers: [
+        {
+          id: 'free',
+          name: 'Free',
+          price_id: 'price_free',
+          price: 0,
+          features: [
+            'Up to 3 connected accounts',
+            'Basic transaction tracking',
+            'Monthly spending reports',
+            'Mobile app access',
+          ],
+        },
+        {
+          id: 'pro',
+          name: 'Pro',
+          price_id: import.meta.env.VITE_STRIPE_PRO_PRICE_ID || 'price_pro',
+          price: 9.99,
+          features: [
+            'Unlimited connected accounts',
+            'Advanced analytics & insights',
+            'Custom categories & budgets',
+            'Goal tracking & forecasting',
+            'Priority support',
+            'Export to CSV/PDF',
+          ],
+        },
+        {
+          id: 'premium',
+          name: 'Premium',
+          price_id: import.meta.env.VITE_STRIPE_PREMIUM_PRICE_ID || 'price_premium',
+          price: 19.99,
+          features: [
+            'Everything in Pro',
+            'AI-powered financial insights',
+            'Investment portfolio tracking',
+            'Tax optimization suggestions',
+            'Dedicated account manager',
+            'Custom integrations',
+            'Advanced security features',
+          ],
+        },
+      ],
     };
   },
 
