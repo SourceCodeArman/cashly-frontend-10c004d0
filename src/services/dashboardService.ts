@@ -36,7 +36,7 @@ export const dashboardService = {
       },
       recent_transactions: transactions.results.slice(0, 10),
       monthly_spending: {
-        total: Object.values(categorySpending).reduce((sum: number, val: any) => sum + val, 0),
+        total: Object.values(categorySpending).reduce((sum: number, val: any) => sum + (val as number), 0) as number,
         by_category: Object.entries(categorySpending).map(([name, amount]) => ({
           name,
           amount: amount as number,
