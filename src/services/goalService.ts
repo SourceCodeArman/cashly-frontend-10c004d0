@@ -82,9 +82,14 @@ export const goalService = {
 
     if (contribError) throw contribError;
 
-    // Update goal current_amount
-    const goal = await this.getGoal(id);
-    const currentAmount = goal?.current_amount ?? 0;
+    // Get current goal and update amount
+    const { data: goalData } = await supabase
+      .from('goals')
+      .select('current_amount')
+      .eq('goal_id', id)
+      .single();
+    
+    const currentAmount = goalData?.current_amount ?? 0;
     const newAmount = parseFloat(currentAmount.toString()) + parseFloat(contributionData.amount.toString());
     
     const { data, error } = await supabase
