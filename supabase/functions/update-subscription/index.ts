@@ -92,7 +92,7 @@ serve(async (req) => {
     });
 
     // Get the prorated invoice preview
-    const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+    const upcomingInvoice = await stripe.invoices.upcoming({
       customer: customerId,
     });
 
