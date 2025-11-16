@@ -140,9 +140,93 @@ serve(async (req) => {
 
     logStep("Accounts saved successfully");
 
+    // Fetch and save transactions for all accounts
+    let totalTransactionsSynced = 0;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    const endDate = new Date();
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+    try {
+      logStep("Fetching initial transactions", { 
+        startDate: formatDate(startDate), 
+        endDate: formatDate(endDate) 
+      });
+
+      const txResponse = await fetch(`${plaidUrl}/transactions/get`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: plaidClientId,
+          secret: plaidSecret,
+          access_token: access_token,
+          start_date: formatDate(startDate),
+          end_date: formatDate(endDate),
+        }),
+      });
+
+      const txData = await txResponse.json();
+      
+      if (txResponse.ok && txData.transactions?.length > 0) {
+        logStep("Fetched transactions", { count: txData.transactions.length });
+
+        // Map Plaid account IDs to our account IDs
+        const accountIdMap = new Map();
+        for (const acc of accountsData.accounts) {
+          const ourAccount = accountsToInsert.find((a: any) => a.plaid_account_id === acc.account_id);
+          if (ourAccount) {
+            // Get the saved account ID from database
+            const { data: savedAccount } = await supabaseClient
+              .from("accounts")
+              .select("account_id")
+              .eq("plaid_account_id", acc.account_id)
+              .eq("user_id", user.id)
+              .single();
+            
+            if (savedAccount) {
+              accountIdMap.set(acc.account_id, savedAccount.account_id);
+            }
+          }
+        }
+
+        // Prepare transactions for insertion
+        const transactionsToInsert = txData.transactions.map((tx: any) => ({
+          user_id: user.id,
+          account_id: accountIdMap.get(tx.account_id),
+          plaid_transaction_id: tx.transaction_id,
+          amount: Math.abs(tx.amount),
+          date: tx.date,
+          description: tx.name,
+          merchant_name: tx.merchant_name || tx.name,
+          pending: tx.pending,
+          is_transfer: tx.transaction_type === "transfer",
+          plaid_category: tx.category,
+          category_id: null,
+        })).filter((tx: any) => tx.account_id); // Only include transactions for mapped accounts
+
+        if (transactionsToInsert.length > 0) {
+          const { error: txInsertError } = await supabaseClient
+            .from("transactions")
+            .insert(transactionsToInsert);
+
+          if (txInsertError) {
+            logStep("Failed to insert transactions", { error: txInsertError.message });
+          } else {
+            totalTransactionsSynced = transactionsToInsert.length;
+            logStep("Transactions synced successfully", { count: totalTransactionsSynced });
+          }
+        }
+      }
+    } catch (txError) {
+      logStep("Transaction sync error (non-fatal)", { 
+        error: txError instanceof Error ? txError.message : String(txError) 
+      });
+    }
+
     return new Response(JSON.stringify({ 
       success: true,
-      accounts_count: accountsData.accounts.length 
+      accounts_count: accountsData.accounts.length,
+      transactions_synced: totalTransactionsSynced
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

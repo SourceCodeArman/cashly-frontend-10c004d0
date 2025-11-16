@@ -41,7 +41,7 @@ export function PlaidLink({ onSuccess }: PlaidLinkProps) {
 
       if (error) throw error;
 
-      toast.success(`Successfully linked ${data.accounts_count} account(s)!`);
+      toast.success(`Successfully linked ${data.accounts_count} account(s) with ${data.transactions_synced || 0} transaction(s)!`);
       onSuccess?.();
     } catch (error) {
       console.error('Error exchanging token:', error);
