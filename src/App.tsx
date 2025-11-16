@@ -22,6 +22,7 @@ import Categories from "./pages/Categories";
 import Subscription from "./pages/Subscription";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const AppContent = () => {
@@ -59,6 +60,7 @@ const AppContent = () => {
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Route>
 
       {/* 404 */}
