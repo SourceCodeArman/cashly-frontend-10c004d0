@@ -44,12 +44,12 @@ export const Header = () => {
           onClick={() => navigate('/notifications')}
         >
           <Bell className="h-5 w-5" />
-          {unreadData && unreadData.unread_count > 0 && (
+          {unreadData && unreadData.count > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
-              {unreadData.unread_count}
+              {unreadData.count}
             </Badge>
           )}
         </Button>
