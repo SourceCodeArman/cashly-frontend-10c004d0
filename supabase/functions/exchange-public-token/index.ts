@@ -120,8 +120,40 @@ serve(async (req) => {
 
     logStep("Filtered accounts to link", { count: accountsToLink.length, selectedIds: selectedAccountIds });
 
+    // Check for existing accounts to prevent duplicates
+    const plaidAccountIds = accountsToLink.map((acc: any) => acc.account_id);
+    const { data: existingAccounts, error: checkError } = await supabaseClient
+      .from("accounts")
+      .select("plaid_account_id, custom_name")
+      .eq("user_id", user.id)
+      .in("plaid_account_id", plaidAccountIds);
+
+    if (checkError) {
+      logStep("Error checking for existing accounts", { error: checkError.message });
+    }
+
+    const existingAccountIds = new Set(existingAccounts?.map(acc => acc.plaid_account_id) || []);
+    const newAccounts = accountsToLink.filter((acc: any) => !existingAccountIds.has(acc.account_id));
+
+    if (newAccounts.length === 0) {
+      logStep("All accounts already linked");
+      return new Response(JSON.stringify({ 
+        error: "All selected accounts are already linked to your profile",
+        accounts_count: 0,
+        transactions_synced: 0
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    if (newAccounts.length < accountsToLink.length) {
+      const duplicateCount = accountsToLink.length - newAccounts.length;
+      logStep("Skipping duplicate accounts", { duplicateCount, newCount: newAccounts.length });
+    }
+
     // Store accounts in database
-    const accountsToInsert = accountsToLink.map((acc: any) => ({
+    const accountsToInsert = newAccounts.map((acc: any) => ({
       user_id: user.id,
       plaid_account_id: acc.account_id,
       plaid_item_id: item_id,
@@ -232,10 +264,12 @@ serve(async (req) => {
       });
     }
 
+    const skippedCount = accountsToLink.length - newAccounts.length;
     return new Response(JSON.stringify({ 
       success: true,
-      accounts_count: accountsToLink.length,
-      transactions_synced: totalTransactionsSynced
+      accounts_count: newAccounts.length,
+      transactions_synced: totalTransactionsSynced,
+      skipped_duplicates: skippedCount
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

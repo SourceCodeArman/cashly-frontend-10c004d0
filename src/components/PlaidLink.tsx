@@ -87,7 +87,18 @@ export function PlaidLink({ onSuccess }: PlaidLinkProps) {
 
       if (error) throw error;
 
-      toast.success(`Successfully linked ${data.accounts_count} account(s) with ${data.transactions_synced || 0} transaction(s)!`);
+      if (data.accounts_count === 0) {
+        toast.error('All selected accounts are already linked');
+        setShowAccountSelection(false);
+        return;
+      }
+
+      let message = `Successfully linked ${data.accounts_count} account(s) with ${data.transactions_synced || 0} transaction(s)!`;
+      if (data.skipped_duplicates > 0) {
+        message += ` ${data.skipped_duplicates} duplicate account(s) were skipped.`;
+      }
+      
+      toast.success(message);
       setShowAccountSelection(false);
       onSuccess?.();
     } catch (error) {
