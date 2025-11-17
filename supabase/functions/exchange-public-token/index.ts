@@ -35,7 +35,7 @@ serve(async (req) => {
     if (!user?.id) throw new Error("User not authenticated");
     logStep("User authenticated", { userId: user.id });
 
-    const { publicToken } = await req.json();
+    const { publicToken, selectedAccountIds } = await req.json();
     if (!publicToken) throw new Error("Public token is required");
 
     const plaidClientId = Deno.env.get("PLAID_CLIENT_ID");
@@ -113,8 +113,15 @@ serve(async (req) => {
       logStep("Failed to fetch institution name", { error });
     }
 
+    // Filter accounts based on user selection (if provided)
+    const accountsToLink = selectedAccountIds && selectedAccountIds.length > 0
+      ? accountsData.accounts.filter((acc: any) => selectedAccountIds.includes(acc.account_id))
+      : accountsData.accounts;
+
+    logStep("Filtered accounts to link", { count: accountsToLink.length, selectedIds: selectedAccountIds });
+
     // Store accounts in database
-    const accountsToInsert = accountsData.accounts.map((acc: any) => ({
+    const accountsToInsert = accountsToLink.map((acc: any) => ({
       user_id: user.id,
       plaid_account_id: acc.account_id,
       plaid_item_id: item_id,
@@ -170,9 +177,9 @@ serve(async (req) => {
       if (txResponse.ok && txData.transactions?.length > 0) {
         logStep("Fetched transactions", { count: txData.transactions.length });
 
-        // Map Plaid account IDs to our account IDs
+        // Map Plaid account IDs to our account IDs (only for linked accounts)
         const accountIdMap = new Map();
-        for (const acc of accountsData.accounts) {
+        for (const acc of accountsToLink) {
           const ourAccount = accountsToInsert.find((a: any) => a.plaid_account_id === acc.account_id);
           if (ourAccount) {
             // Get the saved account ID from database
@@ -227,7 +234,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true,
-      accounts_count: accountsData.accounts.length,
+      accounts_count: accountsToLink.length,
       transactions_synced: totalTransactionsSynced
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
