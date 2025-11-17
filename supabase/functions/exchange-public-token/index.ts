@@ -122,6 +122,8 @@ serve(async (req) => {
 
     // Check for existing accounts to prevent duplicates
     const plaidAccountIds = accountsToLink.map((acc: any) => acc.account_id);
+    logStep("Checking for duplicates", { plaidAccountIds, userId: user.id });
+    
     const { data: existingAccounts, error: checkError } = await supabaseClient
       .from("accounts")
       .select("plaid_account_id, custom_name")
@@ -132,8 +134,19 @@ serve(async (req) => {
       logStep("Error checking for existing accounts", { error: checkError.message });
     }
 
+    logStep("Found existing accounts", { 
+      count: existingAccounts?.length || 0,
+      existingIds: existingAccounts?.map(acc => acc.plaid_account_id) || []
+    });
+
     const existingAccountIds = new Set(existingAccounts?.map(acc => acc.plaid_account_id) || []);
     const newAccounts = accountsToLink.filter((acc: any) => !existingAccountIds.has(acc.account_id));
+    
+    logStep("After filtering duplicates", { 
+      totalAccounts: accountsToLink.length,
+      newAccounts: newAccounts.length,
+      duplicates: accountsToLink.length - newAccounts.length
+    });
 
     if (newAccounts.length === 0) {
       logStep("All accounts already linked");
